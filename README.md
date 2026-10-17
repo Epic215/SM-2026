@@ -36,3 +36,6 @@ Dodatkowo użytkownik będzie mógł wybrać bardziej wyspecjalizowane, wbudowan
 - Maciej Michoń
 
 ## Postępy prac
+
+- **12–15.10.2026**: ustalenie zakresu aplikacji i przygotowanie roadmapy funkcji (Must / Should / Could)
+- **17.10.2026**: przygotowanie środowiska: utworzenie projektu w Android Studio (Kotlin + Jetpack Compose), konfiguracja Gradle

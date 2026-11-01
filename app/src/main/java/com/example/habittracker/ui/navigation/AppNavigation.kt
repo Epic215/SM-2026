@@ -16,11 +16,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.habittracker.ui.screens.calendar.CalendarScreen
+import com.example.habittracker.ui.screens.edit.HabitEditScreen
+import com.example.habittracker.ui.screens.edit.HabitEditViewModel
 import com.example.habittracker.ui.screens.habits.HabitsScreen
 import com.example.habittracker.ui.screens.stats.StatsScreen
 
@@ -34,30 +38,39 @@ private enum class TopLevelDestination(
     Stats("stats", "Statystyki", Icons.Outlined.BarChart),
 }
 
+private const val HABIT_EDIT_ROUTE = "habit/edit"
+private const val HABIT_EDIT_ROUTE_PATTERN =
+    "$HABIT_EDIT_ROUTE?${HabitEditViewModel.HABIT_ID_ARG}={${HabitEditViewModel.HABIT_ID_ARG}}"
+
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val showBottomBar = currentDestination == null || TopLevelDestination.entries.any { destination ->
+        currentDestination.hierarchy.any { it.route == destination.route }
+    }
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                TopLevelDestination.entries.forEach { destination ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true,
-                        onClick = {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (showBottomBar) {
+                NavigationBar {
+                    TopLevelDestination.entries.forEach { destination ->
+                        NavigationBarItem(
+                            selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true,
+                            onClick = {
+                                navController.navigate(destination.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(destination.icon, contentDescription = null) },
-                        label = { Text(destination.label) },
-                    )
+                            },
+                            icon = { Icon(destination.icon, contentDescription = null) },
+                            label = { Text(destination.label) },
+                        )
+                    }
                 }
             }
         }
@@ -67,9 +80,27 @@ fun AppNavigation() {
             startDestination = TopLevelDestination.Habits.route,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(TopLevelDestination.Habits.route) { HabitsScreen() }
+            composable(TopLevelDestination.Habits.route) {
+                HabitsScreen(
+                    onAddHabit = { navController.navigate(HABIT_EDIT_ROUTE) },
+                    onEditHabit = { id ->
+                        navController.navigate("$HABIT_EDIT_ROUTE?${HabitEditViewModel.HABIT_ID_ARG}=$id")
+                    },
+                )
+            }
             composable(TopLevelDestination.Calendar.route) { CalendarScreen() }
             composable(TopLevelDestination.Stats.route) { StatsScreen() }
+            composable(
+                route = HABIT_EDIT_ROUTE_PATTERN,
+                arguments = listOf(
+                    navArgument(HabitEditViewModel.HABIT_ID_ARG) {
+                        type = NavType.LongType
+                        defaultValue = -1L
+                    }
+                ),
+            ) {
+                HabitEditScreen(onBack = { navController.popBackStack() })
+            }
         }
     }
 }

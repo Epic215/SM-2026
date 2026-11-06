@@ -23,6 +23,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.habittracker.ui.screens.calendar.CalendarScreen
+import com.example.habittracker.ui.screens.details.HabitDetailsScreen
+import com.example.habittracker.ui.screens.details.HabitDetailsViewModel
 import com.example.habittracker.ui.screens.edit.HabitEditScreen
 import com.example.habittracker.ui.screens.edit.HabitEditViewModel
 import com.example.habittracker.ui.screens.habits.HabitsScreen
@@ -41,6 +43,9 @@ private enum class TopLevelDestination(
 private const val HABIT_EDIT_ROUTE = "habit/edit"
 private const val HABIT_EDIT_ROUTE_PATTERN =
     "$HABIT_EDIT_ROUTE?${HabitEditViewModel.HABIT_ID_ARG}={${HabitEditViewModel.HABIT_ID_ARG}}"
+private const val HABIT_DETAILS_ROUTE = "habit/details"
+private const val HABIT_DETAILS_ROUTE_PATTERN =
+    "$HABIT_DETAILS_ROUTE/{${HabitDetailsViewModel.HABIT_ID_ARG}}"
 
 @Composable
 fun AppNavigation() {
@@ -83,9 +88,7 @@ fun AppNavigation() {
             composable(TopLevelDestination.Habits.route) {
                 HabitsScreen(
                     onAddHabit = { navController.navigate(HABIT_EDIT_ROUTE) },
-                    onEditHabit = { id ->
-                        navController.navigate("$HABIT_EDIT_ROUTE?${HabitEditViewModel.HABIT_ID_ARG}=$id")
-                    },
+                    onOpenHabit = { id -> navController.navigate("$HABIT_DETAILS_ROUTE/$id") },
                 )
             }
             composable(TopLevelDestination.Calendar.route) { CalendarScreen() }
@@ -100,6 +103,19 @@ fun AppNavigation() {
                 ),
             ) {
                 HabitEditScreen(onBack = { navController.popBackStack() })
+            }
+            composable(
+                route = HABIT_DETAILS_ROUTE_PATTERN,
+                arguments = listOf(
+                    navArgument(HabitDetailsViewModel.HABIT_ID_ARG) { type = NavType.LongType }
+                ),
+            ) {
+                HabitDetailsScreen(
+                    onBack = { navController.popBackStack() },
+                    onEdit = { id ->
+                        navController.navigate("$HABIT_EDIT_ROUTE?${HabitEditViewModel.HABIT_ID_ARG}=$id")
+                    },
+                )
             }
         }
     }

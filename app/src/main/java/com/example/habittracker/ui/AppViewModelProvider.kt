@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.habittracker.HabitTrackerApp
+import com.example.habittracker.ui.screens.details.HabitDetailsViewModel
 import com.example.habittracker.ui.screens.edit.HabitEditViewModel
 import com.example.habittracker.ui.screens.habits.HabitsViewModel
 
@@ -13,6 +14,7 @@ object AppViewModelProvider {
     val Factory = viewModelFactory {
         initializer { HabitsViewModel(habitTrackerApp().repository) }
         initializer { HabitEditViewModel(createSavedStateHandle(), habitTrackerApp().repository) }
+        initializer { HabitDetailsViewModel(createSavedStateHandle(), habitTrackerApp().repository) }
     }
 }
 

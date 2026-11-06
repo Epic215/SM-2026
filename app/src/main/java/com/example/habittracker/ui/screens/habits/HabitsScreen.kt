@@ -44,7 +44,7 @@ private val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.f
 @Composable
 fun HabitsScreen(
     onAddHabit: () -> Unit,
-    onEditHabit: (Long) -> Unit,
+    onOpenHabit: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HabitsViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
@@ -59,7 +59,7 @@ fun HabitsScreen(
                 uiState = uiState,
                 onToggle = viewModel::toggle,
                 onChangeCount = viewModel::changeTodayCount,
-                onEditHabit = onEditHabit,
+                onOpenHabit = onOpenHabit,
             )
         }
 
@@ -81,7 +81,7 @@ private fun HabitsList(
     uiState: HabitsUiState,
     onToggle: (Long, LocalDate) -> Unit,
     onChangeCount: (HabitRowState, Int) -> Unit,
-    onEditHabit: (Long) -> Unit,
+    onOpenHabit: (Long) -> Unit,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
@@ -99,7 +99,7 @@ private fun HabitsList(
                 HabitRow(
                     row = row,
                     onToggle = { date -> onToggle(row.habit.id, date) },
-                    onClick = { onEditHabit(row.habit.id) },
+                    onClick = { onOpenHabit(row.habit.id) },
                 )
             }
         }
@@ -111,7 +111,7 @@ private fun HabitsList(
                     row = row,
                     onIncrement = { onChangeCount(row, 1) },
                     onDecrement = { onChangeCount(row, -1) },
-                    onClick = { onEditHabit(row.habit.id) },
+                    onClick = { onOpenHabit(row.habit.id) },
                 )
             }
         }

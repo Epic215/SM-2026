@@ -29,11 +29,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.habittracker.ui.screens.habits.components.shortLabel
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
-import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -42,21 +42,19 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private const val MONTHS_BACK = 12L
+const val CALENDAR_MONTHS_BACK = 12L
 private val polish = Locale.forLanguageTag("pl")
 private val monthFormatter = DateTimeFormatter.ofPattern("LLLL yyyy", polish)
 
+/** Month pager with header and weekday labels; [dayContent] renders days of the visible month. */
 @Composable
 fun MonthCalendar(
-    doneDates: Set<LocalDate>,
-    isScheduled: (LocalDate) -> Boolean,
-    habitColor: Color,
     today: LocalDate,
-    onDayClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
+    dayContent: @Composable (LocalDate) -> Unit,
 ) {
     val currentMonth = remember(today) { YearMonth.from(today) }
-    val startMonth = remember(currentMonth) { currentMonth.minusMonths(MONTHS_BACK) }
+    val startMonth = remember(currentMonth) { currentMonth.minusMonths(CALENDAR_MONTHS_BACK) }
     val state = rememberCalendarState(
         startMonth = startMonth,
         endMonth = currentMonth,
@@ -109,15 +107,11 @@ fun MonthCalendar(
             HorizontalCalendar(
                 state = state,
                 dayContent = { day ->
-                    DayCell(
-                        day = day,
-                        done = day.date in doneDates,
-                        scheduled = isScheduled(day.date),
-                        isToday = day.date == today,
-                        isFuture = day.date.isAfter(today),
-                        habitColor = habitColor,
-                        onClick = { onDayClick(day.date) },
-                    )
+                    if (day.position == DayPosition.MonthDate) {
+                        dayContent(day.date)
+                    } else {
+                        Box(Modifier.aspectRatio(1f))
+                    }
                 },
             )
         }
@@ -125,47 +119,75 @@ fun MonthCalendar(
 }
 
 @Composable
-private fun DayCell(
-    day: CalendarDay,
-    done: Boolean,
-    scheduled: Boolean,
-    isToday: Boolean,
-    isFuture: Boolean,
-    habitColor: Color,
+fun CalendarDayCell(
+    day: Int,
+    fill: Color?,
+    border: Color?,
+    textColor: Color,
+    bold: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit,
+    borderWidth: Dp = 2.dp,
 ) {
-    if (day.position != DayPosition.MonthDate) {
-        Box(Modifier.aspectRatio(1f))
-        return
-    }
-
-    val colors = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(3.dp)
             .clip(CircleShape)
-            .then(
-                when {
-                    done -> Modifier.background(habitColor)
-                    scheduled && !isFuture -> Modifier.border(1.5.dp, habitColor.copy(alpha = 0.35f), CircleShape)
-                    else -> Modifier
-                }
-            )
-            .then(if (isToday && !done) Modifier.border(2.dp, colors.primary, CircleShape) else Modifier)
-            .clickable(enabled = !isFuture, onClick = onClick),
+            .then(if (fill != null) Modifier.background(fill) else Modifier)
+            .then(if (border != null) Modifier.border(borderWidth, border, CircleShape) else Modifier)
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = day.date.dayOfMonth.toString(),
+            text = day.toString(),
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-            color = when {
-                done -> Color.White
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+            color = textColor,
+        )
+    }
+}
+
+@Composable
+fun HabitMonthCalendar(
+    doneDates: Set<LocalDate>,
+    isScheduled: (LocalDate) -> Boolean,
+    habitColor: Color,
+    isNegative: Boolean,
+    today: LocalDate,
+    onDayClick: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    MonthCalendar(today = today, modifier = modifier) { date ->
+        val marked = date in doneDates
+        val scheduled = isScheduled(date)
+        val isToday = date == today
+        val isFuture = date.isAfter(today)
+        val isPast = !isFuture && !isToday
+
+        CalendarDayCell(
+            day = date.dayOfMonth,
+            fill = when {
+                marked -> if (isNegative) colors.tertiary else habitColor
+                isNegative && scheduled && isPast -> habitColor.copy(alpha = 0.15f)
+                else -> null
+            },
+            border = when {
+                isToday && !marked -> colors.primary
+                !isNegative && !marked && scheduled && isPast -> habitColor.copy(alpha = 0.35f)
+                else -> null
+            },
+            borderWidth = if (isToday) 2.dp else 1.5.dp,
+            textColor = when {
+                marked -> Color.White
                 isFuture -> colors.onSurfaceVariant.copy(alpha = 0.4f)
                 scheduled -> colors.onSurface
                 else -> colors.onSurfaceVariant
             },
+            bold = isToday,
+            enabled = !isFuture,
+            onClick = { onDayClick(date) },
         )
     }
 }

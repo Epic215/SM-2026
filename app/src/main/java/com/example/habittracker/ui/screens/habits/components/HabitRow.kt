@@ -16,13 +16,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Remove
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.habittracker.data.model.FrequencyType
+import com.example.habittracker.domain.isNegative
 import com.example.habittracker.ui.screens.habits.DayCell
 import com.example.habittracker.ui.screens.habits.HabitRowState
 import java.time.DayOfWeek
@@ -52,6 +49,8 @@ internal fun DayOfWeek.shortLabel(): String = when (this) {
     DayOfWeek.SATURDAY -> "So"
     DayOfWeek.SUNDAY -> "Nd"
 }
+
+internal fun dayCountText(count: Int): String = if (count == 1) "1 dzień" else "$count dni"
 
 @Composable
 fun HabitRow(
@@ -79,50 +78,13 @@ fun HabitRow(
         }
         row.days.forEach { day ->
             Box(Modifier.width(DayCellWidth), contentAlignment = Alignment.Center) {
-                DayCircle(day = day, habitColor = habitColor, onClick = { onToggle(day.date) })
+                DayCircle(
+                    day = day,
+                    habitColor = habitColor,
+                    isNegative = row.habit.isNegative,
+                    onClick = { onToggle(day.date) },
+                )
             }
-        }
-    }
-}
-
-@Composable
-fun SporadicHabitRow(
-    row: HabitRowState,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val habitColor = Color(row.habit.color)
-    HabitCard(onClick = onClick, modifier = modifier) {
-        ColorBar(habitColor)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = row.habit.name,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = if (row.todayValue == 0) "Dziś jeszcze nie" else "Dziś: ${row.todayValue}×",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (row.todayValue > 0) {
-            IconButton(onClick = onDecrement) {
-                Icon(Icons.Rounded.Remove, contentDescription = "Odejmij")
-            }
-        }
-        FilledTonalIconButton(
-            onClick = onIncrement,
-            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = habitColor.copy(alpha = 0.15f),
-                contentColor = habitColor,
-            ),
-        ) {
-            Icon(Icons.Rounded.Add, contentDescription = "Dodaj wykonanie")
         }
     }
 }
@@ -164,7 +126,13 @@ private fun ColorBar(color: Color) {
 }
 
 @Composable
-private fun DayCircle(day: DayCell, habitColor: Color, onClick: () -> Unit) {
+private fun DayCircle(
+    day: DayCell,
+    habitColor: Color,
+    isNegative: Boolean,
+    onClick: () -> Unit,
+) {
+    val markColor = if (isNegative) MaterialTheme.colorScheme.tertiary else habitColor
     Box(
         modifier = Modifier
             .size(32.dp)
@@ -172,7 +140,7 @@ private fun DayCircle(day: DayCell, habitColor: Color, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .then(
                 when {
-                    day.done -> Modifier.background(habitColor)
+                    day.done -> Modifier.background(markColor)
                     day.scheduled -> Modifier.border(2.dp, habitColor.copy(alpha = 0.35f), CircleShape)
                     else -> Modifier
                 }
@@ -181,7 +149,7 @@ private fun DayCircle(day: DayCell, habitColor: Color, onClick: () -> Unit) {
     ) {
         when {
             day.done -> Icon(
-                Icons.Rounded.Check,
+                if (isNegative) Icons.Rounded.Close else Icons.Rounded.Check,
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(18.dp),
@@ -196,9 +164,12 @@ private fun DayCircle(day: DayCell, habitColor: Color, onClick: () -> Unit) {
     }
 }
 
-private fun HabitRowState.frequencyLabel(): String = when (habit.frequencyType) {
-    FrequencyType.DAILY -> "Codziennie"
-    FrequencyType.TIMES_PER_WEEK -> "$doneThisWeek/${habit.target} w tym tygodniu"
-    FrequencyType.SPECIFIC_DAYS -> habit.daysOfWeek.sorted().joinToString(", ") { it.shortLabel() }
-    FrequencyType.NONE -> "Bez planu"
+private fun HabitRowState.frequencyLabel(): String {
+    if (habit.isNegative) return "${dayCountText(daysSinceLastSlip ?: 0)} bez potknięcia"
+    return when (habit.frequencyType) {
+        FrequencyType.DAILY -> "Codziennie"
+        FrequencyType.TIMES_PER_WEEK -> "$doneThisWeek/${habit.target} w tym tygodniu"
+        FrequencyType.SPECIFIC_DAYS -> habit.daysOfWeek.sorted().joinToString(", ") { it.shortLabel() }
+        FrequencyType.NONE -> "W tym tygodniu: $doneThisWeek×"
+    }
 }

@@ -4,6 +4,7 @@ import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.model.Habit
 import com.example.habittracker.data.model.HabitEntry
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 
 class HabitRepository(private val dao: HabitDao) {
@@ -28,6 +29,11 @@ class HabitRepository(private val dao: HabitDao) {
 
     fun observeEntriesForHabit(habitId: Long): Flow<List<HabitEntry>> =
         dao.observeEntriesForHabit(habitId)
+
+    fun observeAllEntries(): Flow<List<HabitEntry>> = dao.observeAllEntries()
+
+    fun observeLastEntryDates(): Flow<Map<Long, LocalDate>> =
+        dao.observeLastEntryDates().map { list -> list.associate { it.habitId to it.date } }
 
     suspend fun toggleEntry(habitId: Long, date: LocalDate) {
         if (dao.getEntry(habitId, date) != null) {

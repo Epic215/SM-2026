@@ -18,6 +18,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,7 +34,6 @@ import com.example.habittracker.ui.screens.habits.components.DayCellWidth
 import com.example.habittracker.ui.screens.habits.components.HabitRow
 import com.example.habittracker.ui.screens.habits.components.RowEndPadding
 import com.example.habittracker.ui.screens.habits.components.RowStartPadding
-import com.example.habittracker.ui.screens.habits.components.SporadicHabitRow
 import com.example.habittracker.ui.screens.habits.components.shortLabel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -44,6 +44,7 @@ private val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.f
 @Composable
 fun HabitsScreen(
     onAddHabit: () -> Unit,
+    onAddSporadic: () -> Unit,
     onOpenHabit: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HabitsViewModel = viewModel(factory = AppViewModelProvider.Factory),
@@ -53,12 +54,12 @@ fun HabitsScreen(
     Box(modifier = modifier.fillMaxSize()) {
         when {
             uiState.isLoading -> Unit
-            uiState.scheduled.isEmpty() && uiState.sporadic.isEmpty() ->
+            uiState.isEmpty ->
                 EmptyState(Modifier.align(Alignment.Center))
             else -> HabitsList(
                 uiState = uiState,
                 onToggle = viewModel::toggle,
-                onChangeCount = viewModel::changeTodayCount,
+                onAddSporadic = onAddSporadic,
                 onOpenHabit = onOpenHabit,
             )
         }
@@ -80,7 +81,7 @@ fun HabitsScreen(
 private fun HabitsList(
     uiState: HabitsUiState,
     onToggle: (Long, LocalDate) -> Unit,
-    onChangeCount: (HabitRowState, Int) -> Unit,
+    onAddSporadic: () -> Unit,
     onOpenHabit: (Long) -> Unit,
 ) {
     LazyColumn(
@@ -89,8 +90,15 @@ private fun HabitsList(
     ) {
         item { Header(today = uiState.days.last()) }
 
-        if (uiState.dueToday > 0) {
-            item { DailySummaryCard(done = uiState.doneToday, total = uiState.dueToday) }
+        if (uiState.dueToday > 0 || uiState.avoid.isNotEmpty()) {
+            item {
+                DailySummaryCard(
+                    done = uiState.doneToday,
+                    total = uiState.dueToday,
+                    slipsToday = uiState.slipsToday,
+                    showSlips = uiState.avoid.isNotEmpty(),
+                )
+            }
         }
 
         if (uiState.scheduled.isNotEmpty()) {
@@ -104,13 +112,25 @@ private fun HabitsList(
             }
         }
 
-        if (uiState.sporadic.isNotEmpty()) {
-            item { SectionTitle("Sporadyczne") }
-            items(uiState.sporadic, key = { it.habit.id }) { row ->
-                SporadicHabitRow(
+        if (uiState.avoid.isNotEmpty()) {
+            item { SectionTitle("Do unikania") }
+            item { DaysHeader(days = uiState.days) }
+            items(uiState.avoid, key = { it.habit.id }) { row ->
+                HabitRow(
                     row = row,
-                    onIncrement = { onChangeCount(row, 1) },
-                    onDecrement = { onChangeCount(row, -1) },
+                    onToggle = { date -> onToggle(row.habit.id, date) },
+                    onClick = { onOpenHabit(row.habit.id) },
+                )
+            }
+        }
+
+        if (uiState.sporadic.isNotEmpty()) {
+            item { SectionTitle("Sporadyczne", actionLabel = "Dodaj", onAction = onAddSporadic) }
+            item { DaysHeader(days = uiState.days) }
+            items(uiState.sporadic, key = { it.habit.id }) { row ->
+                HabitRow(
+                    row = row,
+                    onToggle = { date -> onToggle(row.habit.id, date) },
                     onClick = { onOpenHabit(row.habit.id) },
                 )
             }
@@ -163,13 +183,27 @@ private fun DaysHeader(days: List<LocalDate>) {
 }
 
 @Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 12.dp, start = 4.dp),
-    )
+private fun SectionTitle(
+    title: String,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, start = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        if (actionLabel != null) {
+            TextButton(onClick = onAction) { Text(actionLabel) }
+        }
+    }
 }
 
 @Composable

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.HabitRepository
 import com.example.habittracker.data.model.FrequencyType
 import com.example.habittracker.data.model.Habit
+import com.example.habittracker.data.model.HabitType
 import com.example.habittracker.ui.components.HabitColors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ import java.time.DayOfWeek
 
 data class HabitEditUiState(
     val isEditing: Boolean = false,
+    val type: HabitType = HabitType.POSITIVE,
     val name: String = "",
     val description: String = "",
     val color: Int = HabitColors.first().toArgb(),
@@ -28,7 +30,7 @@ data class HabitEditUiState(
 ) {
     val canSave: Boolean
         get() = !isSaving && name.isNotBlank() &&
-            (frequencyType != FrequencyType.SPECIFIC_DAYS || daysOfWeek.isNotEmpty())
+            (type == HabitType.NEGATIVE || frequencyType != FrequencyType.SPECIFIC_DAYS || daysOfWeek.isNotEmpty())
 }
 
 class HabitEditViewModel(
@@ -39,7 +41,16 @@ class HabitEditViewModel(
     private val habitId: Long? = savedStateHandle.get<Long>(HABIT_ID_ARG)?.takeIf { it > 0 }
     private var original: Habit? = null
 
-    private val _uiState = MutableStateFlow(HabitEditUiState(isEditing = habitId != null))
+    private val _uiState = MutableStateFlow(
+        HabitEditUiState(
+            isEditing = habitId != null,
+            frequencyType = if (savedStateHandle.get<Boolean>(SPORADIC_ARG) == true) {
+                FrequencyType.NONE
+            } else {
+                FrequencyType.DAILY
+            },
+        )
+    )
     val uiState: StateFlow<HabitEditUiState> = _uiState.asStateFlow()
 
     init {
@@ -49,6 +60,7 @@ class HabitEditViewModel(
                 original = habit
                 _uiState.update {
                     it.copy(
+                        type = habit.type,
                         name = habit.name,
                         description = habit.description,
                         color = habit.color,
@@ -60,6 +72,8 @@ class HabitEditViewModel(
             }
         }
     }
+
+    fun onTypeChange(type: HabitType) = _uiState.update { it.copy(type = type) }
 
     fun onNameChange(name: String) = _uiState.update { it.copy(name = name) }
 
@@ -81,17 +95,19 @@ class HabitEditViewModel(
         if (!state.canSave) return
         _uiState.update { it.copy(isSaving = true) }
 
-        val target = if (state.frequencyType == FrequencyType.TIMES_PER_WEEK) state.target else 1
-        val days = if (state.frequencyType == FrequencyType.SPECIFIC_DAYS) state.daysOfWeek else emptySet()
+        val frequency = if (state.type == HabitType.NEGATIVE) FrequencyType.DAILY else state.frequencyType
+        val target = if (frequency == FrequencyType.TIMES_PER_WEEK) state.target else 1
+        val days = if (frequency == FrequencyType.SPECIFIC_DAYS) state.daysOfWeek else emptySet()
 
         viewModelScope.launch {
             val current = original
             if (current == null) {
                 repository.addHabit(
                     Habit(
+                        type = state.type,
                         name = state.name.trim(),
                         description = state.description.trim(),
-                        frequencyType = state.frequencyType,
+                        frequencyType = frequency,
                         target = target,
                         daysOfWeek = days,
                         color = state.color,
@@ -102,7 +118,7 @@ class HabitEditViewModel(
                     current.copy(
                         name = state.name.trim(),
                         description = state.description.trim(),
-                        frequencyType = state.frequencyType,
+                        frequencyType = frequency,
                         target = target,
                         daysOfWeek = days,
                         color = state.color,
@@ -124,6 +140,7 @@ class HabitEditViewModel(
 
     companion object {
         const val HABIT_ID_ARG = "habitId"
+        const val SPORADIC_ARG = "sporadic"
         const val MIN_TARGET = 1
         const val MAX_TARGET = 6
     }

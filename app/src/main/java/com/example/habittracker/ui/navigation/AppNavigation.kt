@@ -42,7 +42,8 @@ private enum class TopLevelDestination(
 
 private const val HABIT_EDIT_ROUTE = "habit/edit"
 private const val HABIT_EDIT_ROUTE_PATTERN =
-    "$HABIT_EDIT_ROUTE?${HabitEditViewModel.HABIT_ID_ARG}={${HabitEditViewModel.HABIT_ID_ARG}}"
+    "$HABIT_EDIT_ROUTE?${HabitEditViewModel.HABIT_ID_ARG}={${HabitEditViewModel.HABIT_ID_ARG}}" +
+        "&${HabitEditViewModel.SPORADIC_ARG}={${HabitEditViewModel.SPORADIC_ARG}}"
 private const val HABIT_DETAILS_ROUTE = "habit/details"
 private const val HABIT_DETAILS_ROUTE_PATTERN =
     "$HABIT_DETAILS_ROUTE/{${HabitDetailsViewModel.HABIT_ID_ARG}}"
@@ -88,18 +89,27 @@ fun AppNavigation() {
             composable(TopLevelDestination.Habits.route) {
                 HabitsScreen(
                     onAddHabit = { navController.navigate(HABIT_EDIT_ROUTE) },
+                    onAddSporadic = {
+                        navController.navigate("$HABIT_EDIT_ROUTE?${HabitEditViewModel.SPORADIC_ARG}=true")
+                    },
                     onOpenHabit = { id -> navController.navigate("$HABIT_DETAILS_ROUTE/$id") },
                 )
             }
             composable(TopLevelDestination.Calendar.route) { CalendarScreen() }
-            composable(TopLevelDestination.Stats.route) { StatsScreen() }
+            composable(TopLevelDestination.Stats.route) {
+                StatsScreen(onOpenHabit = { id -> navController.navigate("$HABIT_DETAILS_ROUTE/$id") })
+            }
             composable(
                 route = HABIT_EDIT_ROUTE_PATTERN,
                 arguments = listOf(
                     navArgument(HabitEditViewModel.HABIT_ID_ARG) {
                         type = NavType.LongType
                         defaultValue = -1L
-                    }
+                    },
+                    navArgument(HabitEditViewModel.SPORADIC_ARG) {
+                        type = NavType.BoolType
+                        defaultValue = false
+                    },
                 ),
             ) {
                 HabitEditScreen(onBack = { navController.popBackStack() })

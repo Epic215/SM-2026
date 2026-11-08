@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.habittracker.data.model.FrequencyType
+import com.example.habittracker.data.model.HabitType
 import com.example.habittracker.ui.AppViewModelProvider
 import com.example.habittracker.ui.components.HabitColors
 import com.example.habittracker.ui.screens.habits.components.shortLabel
@@ -115,22 +116,43 @@ fun HabitEditScreen(
                 )
             }
 
+            Section("Typ") {
+                TypePicker(
+                    selected = uiState.type,
+                    enabled = !uiState.isEditing,
+                    onSelect = viewModel::onTypeChange,
+                )
+            }
+
             Section("Kolor") {
                 ColorPicker(selected = uiState.color, onSelect = viewModel::onColorChange)
             }
 
-            Section("Częstotliwość") {
-                FrequencyPicker(selected = uiState.frequencyType, onSelect = viewModel::onFrequencyChange)
-                when (uiState.frequencyType) {
-                    FrequencyType.TIMES_PER_WEEK -> TargetStepper(
-                        target = uiState.target,
-                        onChange = viewModel::onTargetChange,
+            if (uiState.type == HabitType.NEGATIVE) {
+                Section("Jak to działa") {
+                    Text(
+                        text = "Zaznaczasz dni, w których to wystąpiło. Każdy dzień bez wpisu liczy się jako sukces.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    FrequencyType.SPECIFIC_DAYS -> DaysPicker(
-                        selected = uiState.daysOfWeek,
-                        onToggle = viewModel::onDayToggle,
+                }
+            } else {
+                Section("Częstotliwość") {
+                    FrequencyPicker(
+                        selected = uiState.frequencyType,
+                        onSelect = viewModel::onFrequencyChange,
                     )
-                    else -> Unit
+                    when (uiState.frequencyType) {
+                        FrequencyType.TIMES_PER_WEEK -> TargetStepper(
+                            target = uiState.target,
+                            onChange = viewModel::onTargetChange,
+                        )
+                        FrequencyType.SPECIFIC_DAYS -> DaysPicker(
+                            selected = uiState.daysOfWeek,
+                            onToggle = viewModel::onDayToggle,
+                        )
+                        else -> Unit
+                    }
                 }
             }
         }
@@ -206,6 +228,22 @@ private fun ColorPicker(selected: Int, onSelect: (Int) -> Unit) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TypePicker(selected: HabitType, enabled: Boolean, onSelect: (HabitType) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        HabitType.entries.forEach { type ->
+            FilterChip(
+                selected = type == selected,
+                onClick = { onSelect(type) },
+                enabled = enabled,
+                label = {
+                    Text(if (type == HabitType.POSITIVE) "Pozytywny (buduję)" else "Negatywny (ograniczam)")
+                },
+            )
         }
     }
 }
@@ -289,5 +327,5 @@ private fun FrequencyType.label(): String = when (this) {
     FrequencyType.DAILY -> "Codziennie"
     FrequencyType.TIMES_PER_WEEK -> "X razy w tygodniu"
     FrequencyType.SPECIFIC_DAYS -> "Wybrane dni"
-    FrequencyType.NONE -> "Bez planu"
+    FrequencyType.NONE -> "Bez planu (sporadyczny)"
 }

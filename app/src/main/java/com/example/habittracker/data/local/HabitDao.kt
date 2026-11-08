@@ -11,6 +11,8 @@ import com.example.habittracker.data.model.HabitEntry
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
+data class LastEntryDate(val habitId: Long, val date: LocalDate)
+
 @Dao
 interface HabitDao {
 
@@ -37,6 +39,12 @@ interface HabitDao {
 
     @Query("SELECT * FROM habit_entries WHERE habitId = :habitId ORDER BY date")
     fun observeEntriesForHabit(habitId: Long): Flow<List<HabitEntry>>
+
+    @Query("SELECT * FROM habit_entries")
+    fun observeAllEntries(): Flow<List<HabitEntry>>
+
+    @Query("SELECT habitId, MAX(date) AS date FROM habit_entries GROUP BY habitId")
+    fun observeLastEntryDates(): Flow<List<LastEntryDate>>
 
     @Query("SELECT * FROM habit_entries WHERE habitId = :habitId AND date = :date")
     suspend fun getEntry(habitId: Long, date: LocalDate): HabitEntry?

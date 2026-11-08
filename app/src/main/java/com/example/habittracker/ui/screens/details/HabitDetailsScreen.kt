@@ -35,13 +35,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.habittracker.data.model.FrequencyType
+import com.example.habittracker.data.model.Habit
 import com.example.habittracker.domain.HabitStats
 import com.example.habittracker.domain.StatsPeriod
 import com.example.habittracker.domain.StreakUnit
 import com.example.habittracker.domain.isActiveOn
+import com.example.habittracker.domain.isNegative
 import com.example.habittracker.ui.AppViewModelProvider
-import com.example.habittracker.ui.screens.details.components.MonthCalendar
+import com.example.habittracker.ui.screens.details.components.HabitMonthCalendar
 import com.example.habittracker.ui.screens.details.components.StatTile
+import com.example.habittracker.ui.screens.habits.components.dayCountText
 import kotlin.math.roundToInt
 
 @Composable
@@ -98,6 +101,13 @@ fun HabitDetailsScreen(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (habit.isNegative) {
+                Text(
+                    text = "Nawyk do ograniczenia: zaznaczone dni to potknięcia.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
             if (habit.description.isNotBlank()) {
                 Text(
                     text = habit.description,
@@ -109,12 +119,7 @@ fun HabitDetailsScreen(
             PeriodSelector(selected = uiState.period, onSelect = viewModel::selectPeriod)
 
             uiState.stats?.let { stats ->
-                StatsGrid(
-                    stats = stats,
-                    hasSchedule = habit.frequencyType != FrequencyType.NONE,
-                    period = uiState.period,
-                    accent = habitColor,
-                )
+                StatsGrid(habit = habit, stats = stats, period = uiState.period, accent = habitColor)
             }
 
             Text(
@@ -122,10 +127,11 @@ fun HabitDetailsScreen(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp),
             )
-            MonthCalendar(
+            HabitMonthCalendar(
                 doneDates = uiState.doneDates,
                 isScheduled = { habit.isActiveOn(it) },
                 habitColor = habitColor,
+                isNegative = habit.isNegative,
                 today = viewModel.today,
                 onDayClick = viewModel::toggleDay,
             )
@@ -135,7 +141,7 @@ fun HabitDetailsScreen(
 }
 
 @Composable
-private fun PeriodSelector(selected: StatsPeriod, onSelect: (StatsPeriod) -> Unit) {
+internal fun PeriodSelector(selected: StatsPeriod, onSelect: (StatsPeriod) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         StatsPeriod.entries.forEach { period ->
             FilterChip(
@@ -149,64 +155,55 @@ private fun PeriodSelector(selected: StatsPeriod, onSelect: (StatsPeriod) -> Uni
 
 @Composable
 private fun StatsGrid(
+    habit: Habit,
     stats: HabitStats,
-    hasSchedule: Boolean,
     period: StatsPeriod,
     accent: Color,
 ) {
-    val periodLabel = if (period == StatsPeriod.WEEK) "W tym tygodniu" else "W tym miesiącu"
+    val hasSchedule = habit.frequencyType != FrequencyType.NONE
+    val inPeriod = if (period == StatsPeriod.WEEK) "w tym tygodniu" else "w tym miesiącu"
+    val rate = stats.successRate?.let { "${(it * 100).roundToInt()}%" } ?: "—"
+
+    val tiles: List<Pair<String, String>> = buildList {
+        if (habit.isNegative) {
+            add("Bez potknięcia" to dayCountText(stats.daysSinceLastSlip ?: 0))
+            if (hasSchedule) {
+                add("Najdłuższa seria" to streakText(stats.longestStreak, stats.streakUnit))
+                add("Skuteczność" to rate)
+            }
+            add("Potknięcia $inPeriod" to stats.periodCompletions.toString())
+            if (!hasSchedule) add("Potknięcia łącznie" to stats.totalCompletions.toString())
+        } else if (hasSchedule) {
+            add("Aktualna seria" to streakText(stats.currentStreak, stats.streakUnit))
+            add("Najdłuższa seria" to streakText(stats.longestStreak, stats.streakUnit))
+            add("Skuteczność" to rate)
+            add("Wykonania $inPeriod" to stats.periodCompletions.toString())
+        } else {
+            add("Wykonania $inPeriod" to stats.periodCompletions.toString())
+            add("Łącznie" to stats.totalCompletions.toString())
+        }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (hasSchedule) {
+        tiles.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatTile(
-                    label = "Aktualna seria",
-                    value = streakText(stats.currentStreak, stats.streakUnit),
-                    accent = accent,
-                    modifier = Modifier.weight(1f),
-                )
-                StatTile(
-                    label = "Najdłuższa seria",
-                    value = streakText(stats.longestStreak, stats.streakUnit),
-                    accent = accent,
-                    modifier = Modifier.weight(1f),
-                )
+                row.forEach { (label, value) ->
+                    StatTile(label = label, value = value, accent = accent, modifier = Modifier.weight(1f))
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (hasSchedule) {
-                StatTile(
-                    label = "Skuteczność",
-                    value = stats.successRate?.let { "${(it * 100).roundToInt()}%" } ?: "—",
-                    accent = accent,
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                StatTile(
-                    label = "Łącznie",
-                    value = stats.totalCompletions.toString(),
-                    accent = accent,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            StatTile(
-                label = periodLabel,
-                value = stats.periodCompletions.toString(),
-                accent = accent,
-                modifier = Modifier.weight(1f),
-            )
         }
     }
 }
 
-private fun streakText(count: Int, unit: StreakUnit): String {
-    val word = when (unit) {
-        StreakUnit.DAYS -> if (count == 1) "dzień" else "dni"
-        StreakUnit.WEEKS -> when {
+internal fun streakText(count: Int, unit: StreakUnit): String = when (unit) {
+    StreakUnit.DAYS -> dayCountText(count)
+    StreakUnit.WEEKS -> {
+        val word = when {
             count == 1 -> "tydzień"
             count % 10 in 2..4 && count % 100 !in 12..14 -> "tygodnie"
             else -> "tygodni"
         }
+        "$count $word"
     }
-    return "$count $word"
 }

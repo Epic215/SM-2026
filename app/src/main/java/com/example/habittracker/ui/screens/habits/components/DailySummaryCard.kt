@@ -22,7 +22,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun DailySummaryCard(done: Int, total: Int, modifier: Modifier = Modifier) {
+fun DailySummaryCard(
+    done: Int,
+    total: Int,
+    slipsToday: Int,
+    showSlips: Boolean,
+    modifier: Modifier = Modifier,
+) {
     val progress by animateFloatAsState(
         targetValue = if (total == 0) 0f else done.toFloat() / total,
         label = "dailyProgress",
@@ -35,37 +41,48 @@ fun DailySummaryCard(done: Int, total: Int, modifier: Modifier = Modifier) {
         color = colors.primaryContainer,
     ) {
         Column(Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = "$done",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
+            if (total > 0) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = "$done",
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.primary,
+                    )
+                    Text(
+                        text = " / $total",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colors.onPrimaryContainer.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(bottom = 6.dp),
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = if (done == total) "Wszystko zrobione!" else "zrobione dziś",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.onPrimaryContainer,
+                        modifier = Modifier.padding(bottom = 6.dp),
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(CircleShape),
                     color = colors.primary,
-                )
-                Text(
-                    text = " / $total",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.onPrimaryContainer.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(bottom = 6.dp),
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = if (done == total) "Wszystko zrobione!" else "zrobione dziś",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onPrimaryContainer,
-                    modifier = Modifier.padding(bottom = 6.dp),
+                    trackColor = colors.surface,
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(CircleShape),
-                color = colors.primary,
-                trackColor = colors.surface,
-            )
+            if (showSlips) {
+                if (total > 0) Spacer(Modifier.height(12.dp))
+                Text(
+                    text = if (slipsToday == 0) "Dziś bez potknięć" else "Potknięcia dziś: $slipsToday",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = if (slipsToday == 0) colors.secondary else colors.tertiary,
+                )
+            }
         }
     }
 }

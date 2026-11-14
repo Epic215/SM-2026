@@ -5,24 +5,24 @@ Dodatkowo użytkownik będzie mógł wybrać bardziej wyspecjalizowane, wbudowan
 
 # Roadmap
 
-| Priorytet | Funkcja |
-|-----------|---------|
-| **Must** | Zarządzanie nawykami (dodawanie, edycja, usuwanie) |
-| **Must** | Podstawowe ustawienia nawyku: nazwa, typ (pozytywny lub negatywny) i częstotliwość (np. codziennie, 3 razy w tygodniu) |
-| **Must** | Codzienne oznaczanie wykonania nawyku |
-| **Must** | Kalendarz z historią wykonanych nawyków |
-| **Must** | Podsumowanie dnia |
-| **Must** | Statystyki tygodniowe i miesięczne: liczba wykonań, skuteczność w procentach, aktualna i najdłuższa seria |
-| **Must** | Wbudowany nawyk: stopniowa poprawa godziny wstawania |
-| **Must** | Wbudowany nawyk: ograniczenie czasu na wybranych stronach i w aplikacjach |
-| **Should** | Ukrywanie zakończonych nawyków z zachowaniem ich historii i statystyk |
-| **Should** | Dedykowane statystyki dla każdego wbudowanego nawyku, dopasowane do sposobu jego mierzenia |
-| **Should** | Rozszerzona biblioteka wbudowanych nawyków |
-| **Should** | Nawyki mierzalne (np. liczba szklanek wody, minuty) |
-| **Should** | Przypomnienia |
-| **Could** | Notatki do wybranych dni |
-| **Could** | Widget na ekran główny |
-| **Could** | Import danych |
+| Priorytet | Funkcja | Status |
+|-----------|---------|--------|
+| **Must** | Zarządzanie nawykami (dodawanie, edycja, usuwanie) | ✅ |
+| **Must** | Podstawowe ustawienia nawyku: nazwa, typ (pozytywny lub negatywny) i częstotliwość (np. codziennie, 3 razy w tygodniu) | ✅ |
+| **Must** | Codzienne oznaczanie wykonania nawyku | ✅ |
+| **Must** | Kalendarz z historią wykonanych nawyków | ✅ |
+| **Must** | Podsumowanie dnia | ✅ |
+| **Must** | Statystyki tygodniowe i miesięczne: liczba wykonań, skuteczność w procentach, aktualna i najdłuższa seria | ✅ |
+| **Must** | Wbudowany nawyk: stopniowa poprawa godziny wstawania | |
+| **Must** | Wbudowany nawyk: ograniczenie czasu na wybranych stronach i w aplikacjach | |
+| **Should** | Ukrywanie zakończonych nawyków z zachowaniem ich historii i statystyk | |
+| **Should** | Dedykowane statystyki dla każdego wbudowanego nawyku, dopasowane do sposobu jego mierzenia | |
+| **Should** | Rozszerzona biblioteka wbudowanych nawyków | |
+| **Should** | Nawyki mierzalne (np. liczba szklanek wody, minuty) | |
+| **Should** | Przypomnienia | |
+| **Could** | Notatki do wybranych dni | |
+| **Could** | Widget na ekran główny | |
+| **Could** | Import danych | |
 
 - **Must**: podstawowe działanie aplikacji. Bez tych funkcji aplikacja nie spełnia swojego zadania.
 - **Should**: ważne dodatki, które znacznie poprawiają wygodę użytkowania, ale aplikacja działa także bez nich.
@@ -39,3 +39,7 @@ Dodatkowo użytkownik będzie mógł wybrać bardziej wyspecjalizowane, wbudowan
 
 - **12–15.10.2026**: ustalenie zakresu aplikacji i przygotowanie roadmapy funkcji (Must / Should / Could)
 - **17.10.2026**: przygotowanie środowiska: utworzenie projektu w Android Studio (Kotlin + Jetpack Compose), konfiguracja Gradle
+- **31.10.2026**: warstwa danych (Room: nawyki i wpisy dni) oraz nawigacja z dolnym paskiem
+- **01.11.2026**: dodawanie, edycja i usuwanie nawyków, lista z odhaczaniem ostatnich dni, nawyki sporadyczne, podsumowanie dnia
+- **06.11.2026**: statystyki (wykonania, skuteczność, aktualna i najdłuższa seria) z testami jednostkowymi, ekran szczegółów nawyku z kalendarzem historii
+- **08.11.2026**: nawyki negatywne (potknięcia, dni bez potknięcia), kalendarz wszystkich nawyków, ekran statystyk z heatmapą i rankingiem

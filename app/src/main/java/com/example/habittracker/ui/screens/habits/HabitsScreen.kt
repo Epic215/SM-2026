@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.habittracker.ui.AppViewModelProvider
+import com.example.habittracker.ui.screens.builtin.BuiltInHabitRow
 import com.example.habittracker.ui.screens.habits.components.DailySummaryCard
 import com.example.habittracker.ui.screens.habits.components.DayCellWidth
 import com.example.habittracker.ui.screens.habits.components.HabitRow
@@ -45,6 +46,7 @@ private val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.f
 fun HabitsScreen(
     onAddHabit: () -> Unit,
     onAddSporadic: () -> Unit,
+    onAddBuiltIn: () -> Unit,
     onOpenHabit: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HabitsViewModel = viewModel(factory = AppViewModelProvider.Factory),
@@ -55,11 +57,16 @@ fun HabitsScreen(
         when {
             uiState.isLoading -> Unit
             uiState.isEmpty ->
-                EmptyState(Modifier.align(Alignment.Center))
+                EmptyState(
+                    modifier = Modifier.align(Alignment.Center),
+                    onAddBuiltIn = onAddBuiltIn,
+                )
             else -> HabitsList(
                 uiState = uiState,
                 onToggle = viewModel::toggle,
+                onSetBuiltInValue = viewModel::setBuiltInValue,
                 onAddSporadic = onAddSporadic,
+                onAddBuiltIn = onAddBuiltIn,
                 onOpenHabit = onOpenHabit,
             )
         }
@@ -81,7 +88,9 @@ fun HabitsScreen(
 private fun HabitsList(
     uiState: HabitsUiState,
     onToggle: (Long, LocalDate) -> Unit,
+    onSetBuiltInValue: (Long, Int?) -> Unit,
     onAddSporadic: () -> Unit,
+    onAddBuiltIn: () -> Unit,
     onOpenHabit: (Long) -> Unit,
 ) {
     LazyColumn(
@@ -107,6 +116,27 @@ private fun HabitsList(
                 HabitRow(
                     row = row,
                     onToggle = { date -> onToggle(row.habit.id, date) },
+                    onClick = { onOpenHabit(row.habit.id) },
+                )
+            }
+        }
+
+        item { SectionTitle("Wbudowane", actionLabel = "Dodaj", onAction = onAddBuiltIn) }
+        if (uiState.builtIn.isEmpty()) {
+            item {
+                Text(
+                    text = "Gotowe nawyki z własnymi zasadami, np. wstawanie.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            }
+        } else {
+            items(uiState.builtIn, key = { it.habit.id }) { row ->
+                BuiltInHabitRow(
+                    row = row,
+                    today = uiState.days.last(),
+                    onSetValue = { value -> onSetBuiltInValue(row.habit.id, value) },
                     onClick = { onOpenHabit(row.habit.id) },
                 )
             }
@@ -207,7 +237,7 @@ private fun SectionTitle(
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier = Modifier) {
+private fun EmptyState(onAddBuiltIn: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -217,10 +247,11 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            text = "Dodaj pierwszy przyciskiem +",
+            text = "Dodaj pierwszy przyciskiem + albo wybierz wbudowany.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        TextButton(onClick = onAddBuiltIn) { Text("Wbudowane nawyki") }
     }
 }

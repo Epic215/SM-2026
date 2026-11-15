@@ -1,6 +1,7 @@
 package com.example.habittracker.domain
 
 import com.example.habittracker.data.model.Habit
+import com.example.habittracker.domain.builtin.BuiltInHabits
 import java.time.LocalDate
 
 data class HabitSummary(val habit: Habit, val stats: HabitStats)
@@ -19,9 +20,12 @@ fun calculateOverview(
     doneByHabit: Map<Long, Set<LocalDate>>,
     period: StatsPeriod,
     today: LocalDate,
+    todayDecided: Map<Long, Boolean> = emptyMap(),
 ): OverviewStats {
     val summaries = habits.map { habit ->
-        HabitSummary(habit, calculateStats(habit, doneByHabit[habit.id].orEmpty(), period, today))
+        val doneDates = doneByHabit[habit.id].orEmpty()
+        val decided = todayDecided[habit.id] ?: (today in doneDates)
+        HabitSummary(habit, calculateStats(habit, doneDates, period, today, decided))
     }
     val rates = summaries.mapNotNull { it.stats.successRate }
     val (negative, positive) = summaries.partition { it.habit.isNegative }
@@ -37,13 +41,21 @@ fun calculateOverview(
     )
 }
 
-/** Share of positive habits due on [date] that were done; null when none were due. */
+/**
+ * Share of positive habits due on [date] that were done; null when none were due.
+ * [doneByHabit] must already contain success dates for built-in habits.
+ */
 fun dayCompletion(
     habits: List<Habit>,
     doneByHabit: Map<Long, Set<LocalDate>>,
     date: LocalDate,
 ): Float? {
-    val due = habits.filter { !it.isNegative && it.isDueOn(date, doneByHabit[it.id].orEmpty()) }
+    val due = habits.filter { habit ->
+        !habit.isNegative && (
+            BuiltInHabits.find(habit.kind) != null ||
+                habit.isDueOn(date, doneByHabit[habit.id].orEmpty())
+        ) && !date.isBefore(habit.startDate)
+    }
     if (due.isEmpty()) return null
     return due.count { date in doneByHabit[it.id].orEmpty() }.toFloat() / due.size
 }

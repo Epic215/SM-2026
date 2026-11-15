@@ -8,6 +8,7 @@ import androidx.room.Update
 import androidx.room.Upsert
 import com.example.habittracker.data.model.Habit
 import com.example.habittracker.data.model.HabitEntry
+import com.example.habittracker.data.model.HabitSetting
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -45,6 +46,15 @@ interface HabitDao {
 
     @Query("SELECT habitId, MAX(date) AS date FROM habit_entries GROUP BY habitId")
     fun observeLastEntryDates(): Flow<List<LastEntryDate>>
+
+    @Query("SELECT * FROM habit_settings WHERE habitId = :habitId")
+    fun observeSettings(habitId: Long): Flow<List<HabitSetting>>
+
+    @Query("SELECT * FROM habit_settings")
+    fun observeAllSettings(): Flow<List<HabitSetting>>
+
+    @Upsert
+    suspend fun upsertSettings(settings: List<HabitSetting>)
 
     @Query("SELECT * FROM habit_entries WHERE habitId = :habitId AND date = :date")
     suspend fun getEntry(habitId: Long, date: LocalDate): HabitEntry?

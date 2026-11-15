@@ -11,11 +11,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.habittracker.ui.AppViewModelProvider
+import com.example.habittracker.ui.screens.builtin.BuiltInDayDialog
 import com.example.habittracker.ui.screens.calendar.components.DayHabitsList
 import com.example.habittracker.ui.screens.details.components.CalendarDayCell
 import com.example.habittracker.ui.screens.details.components.MonthCalendar
@@ -32,6 +36,8 @@ fun CalendarScreen(
     val uiState by viewModel.uiState.collectAsState()
     val today = viewModel.today
     val colors = MaterialTheme.colorScheme
+    var editingHabitId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val editing = uiState.dayItems.firstOrNull { it.habit.id == editingHabitId }
 
     Column(
         modifier = modifier
@@ -75,6 +81,26 @@ fun CalendarScreen(
         DayHabitsList(
             items = uiState.dayItems,
             onToggle = { habitId -> viewModel.toggle(habitId, uiState.selectedDate) },
+            onEditBuiltIn = { editingHabitId = it.habit.id },
+        )
+    }
+
+    editing?.let { item ->
+        BuiltInDayDialog(
+            habit = item.habit,
+            settings = item.settings,
+            date = uiState.selectedDate,
+            value = item.value,
+            priorSuccessCount = item.priorSuccessCount,
+            onSave = { minutes ->
+                viewModel.setDayValue(item.habit.id, uiState.selectedDate, minutes)
+                editingHabitId = null
+            },
+            onRemove = {
+                viewModel.setDayValue(item.habit.id, uiState.selectedDate, null)
+                editingHabitId = null
+            },
+            onDismiss = { editingHabitId = null },
         )
     }
 }

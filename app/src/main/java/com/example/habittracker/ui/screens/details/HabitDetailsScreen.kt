@@ -27,6 +27,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,20 +45,24 @@ import com.example.habittracker.domain.StreakUnit
 import com.example.habittracker.domain.isActiveOn
 import com.example.habittracker.domain.isNegative
 import com.example.habittracker.ui.AppViewModelProvider
+import com.example.habittracker.ui.screens.builtin.BuiltInDayDialog
+import com.example.habittracker.ui.screens.builtin.BuiltInDetailsInfo
 import com.example.habittracker.ui.screens.details.components.HabitMonthCalendar
 import com.example.habittracker.ui.screens.details.components.StatTile
 import com.example.habittracker.ui.screens.habits.components.dayCountText
+import java.time.LocalDate
 import kotlin.math.roundToInt
 
 @Composable
 fun HabitDetailsScreen(
     onBack: () -> Unit,
-    onEdit: (Long) -> Unit,
+    onEdit: (Habit) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HabitDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val habit = uiState.habit
+    var editingDate by rememberSaveable { mutableStateOf<LocalDate?>(null) }
 
     LaunchedEffect(uiState.isLoading, habit) {
         if (!uiState.isLoading && habit == null) onBack()
@@ -92,7 +99,7 @@ fun HabitDetailsScreen(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = { onEdit(habit.id) }) {
+            IconButton(onClick = { onEdit(habit) }) {
                 Icon(Icons.Outlined.Edit, contentDescription = "Edytuj nawyk")
             }
         }
@@ -108,7 +115,13 @@ fun HabitDetailsScreen(
                     color = MaterialTheme.colorScheme.tertiary,
                 )
             }
-            if (habit.description.isNotBlank()) {
+            if (uiState.isBuiltIn) {
+                BuiltInDetailsInfo(
+                    habit = habit,
+                    settings = uiState.settings,
+                    todayMinimumMinutes = uiState.todayMinimumMinutes,
+                )
+            } else if (habit.description.isNotBlank()) {
                 Text(
                     text = habit.description,
                     style = MaterialTheme.typography.bodyMedium,
@@ -133,10 +146,31 @@ fun HabitDetailsScreen(
                 habitColor = habitColor,
                 isNegative = habit.isNegative,
                 today = viewModel.today,
-                onDayClick = viewModel::toggleDay,
+                onDayClick = { date ->
+                    if (uiState.isBuiltIn) editingDate = date else viewModel.toggleDay(date)
+                },
             )
             Spacer(Modifier.height(16.dp))
         }
+    }
+
+    editingDate?.let { date ->
+        BuiltInDayDialog(
+            habit = habit,
+            settings = uiState.settings,
+            date = date,
+            value = uiState.entriesByDate[date],
+            priorSuccessCount = uiState.doneDates.count { it.isBefore(date) },
+            onSave = { minutes ->
+                viewModel.setDayValue(date, minutes)
+                editingDate = null
+            },
+            onRemove = {
+                viewModel.setDayValue(date, null)
+                editingDate = null
+            },
+            onDismiss = { editingDate = null },
+        )
     }
 }
 

@@ -13,7 +13,7 @@ Dodatkowo użytkownik będzie mógł wybrać bardziej wyspecjalizowane, wbudowan
 | **Must** | Kalendarz z historią wykonanych nawyków | ✅ |
 | **Must** | Podsumowanie dnia | ✅ |
 | **Must** | Statystyki tygodniowe i miesięczne: liczba wykonań, skuteczność w procentach, aktualna i najdłuższa seria | ✅ |
-| **Must** | Wbudowany nawyk: stopniowa poprawa godziny wstawania | |
+| **Must** | Wbudowany nawyk: stopniowa poprawa godziny wstawania | ✅ |
 | **Must** | Wbudowany nawyk: ograniczenie czasu na wybranych stronach i w aplikacjach | |
 | **Should** | Ukrywanie zakończonych nawyków z zachowaniem ich historii i statystyk | |
 | **Should** | Dedykowane statystyki dla każdego wbudowanego nawyku, dopasowane do sposobu jego mierzenia | |
@@ -25,7 +25,7 @@ Dodatkowo użytkownik będzie mógł wybrać bardziej wyspecjalizowane, wbudowan
 | **Could** | Import danych | |
 
 - **Must**: podstawowe działanie aplikacji. Bez tych funkcji aplikacja nie spełnia swojego zadania.
-- **Should**: ważne dodatki, które znacznie poprawiają wygodę użytkowania, ale aplikacja działa także bez nich.
+- **Should**: dodatki, które poprawiają wygodę użytkowania, ale aplikacja działa także bez nich.
 - **Could**: opcjonalne rzeczy, które mogą się pojawić, ale nie muszą.
 
 ## Technologie
@@ -43,3 +43,4 @@ Dodatkowo użytkownik będzie mógł wybrać bardziej wyspecjalizowane, wbudowan
 - **01.11.2026**: dodawanie, edycja i usuwanie nawyków, lista z odhaczaniem ostatnich dni, nawyki sporadyczne, podsumowanie dnia
 - **06.11.2026**: statystyki (wykonania, skuteczność, aktualna i najdłuższa seria) z testami jednostkowymi, ekran szczegółów nawyku z kalendarzem historii
 - **08.11.2026**: nawyki negatywne (potknięcia, dni bez potknięcia), kalendarz wszystkich nawyków, ekran statystyk z heatmapą i rankingiem
+- **14.11.2026**: wbudowany nawyk „wcześniejsze wstawanie”: katalog wbudowanych, ustawienia (cel, krok, tolerancja, czas na zaznaczenie), wpisywanie godziny, automatyczna porażka po deadline

@@ -115,6 +115,19 @@ class HabitStatsTest {
     }
 
     @Test
+    fun decidedUnmarkedTodayBreaksStreak() {
+        val result = calculateStats(
+            habit(),
+            setOf(date(11, 9), date(11, 10)),
+            StatsPeriod.WEEK,
+            today,
+            isTodayDecided = true,
+        )
+        assertEquals(0, result.currentStreak)
+        assertEquals(2, result.longestStreak)
+    }
+
+    @Test
     fun backfilledDaysBeforeStartDateCount() {
         val result = stats(habit(startDate = today), date(11, 9), date(11, 10))
         assertEquals(2, result.currentStreak)

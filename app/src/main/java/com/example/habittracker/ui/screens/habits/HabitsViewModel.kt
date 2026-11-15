@@ -5,16 +5,22 @@ import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.HabitRepository
 import com.example.habittracker.data.model.FrequencyType
 import com.example.habittracker.data.model.Habit
+import com.example.habittracker.domain.builtin.BuiltInHabits
+import com.example.habittracker.domain.builtin.DayOutcome
+import com.example.habittracker.domain.habitProgress
 import com.example.habittracker.domain.isActiveOn
 import com.example.habittracker.domain.isDueOn
 import com.example.habittracker.domain.isNegative
 import com.example.habittracker.domain.startOfWeek
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 data class DayCell(
@@ -35,9 +41,18 @@ data class HabitRowState(
     val isDoneToday: Boolean get() = todayValue > 0
 }
 
+data class BuiltInRowState(
+    val habit: Habit,
+    val settings: Map<String, String>,
+    val todayValue: Int?,
+    val outcome: DayOutcome,
+    val minimumMinutes: Int?,
+)
+
 data class HabitsUiState(
     val days: List<LocalDate> = emptyList(),
     val scheduled: List<HabitRowState> = emptyList(),
+    val builtIn: List<BuiltInRowState> = emptyList(),
     val sporadic: List<HabitRowState> = emptyList(),
     val avoid: List<HabitRowState> = emptyList(),
     val doneToday: Int = 0,
@@ -45,7 +60,8 @@ data class HabitsUiState(
     val slipsToday: Int = 0,
     val isLoading: Boolean = true,
 ) {
-    val isEmpty: Boolean get() = scheduled.isEmpty() && sporadic.isEmpty() && avoid.isEmpty()
+    val isEmpty: Boolean
+        get() = scheduled.isEmpty() && builtIn.isEmpty() && sporadic.isEmpty() && avoid.isEmpty()
 }
 
 class HabitsViewModel(private val repository: HabitRepository) : ViewModel() {
@@ -55,15 +71,41 @@ class HabitsViewModel(private val repository: HabitRepository) : ViewModel() {
     private val weekStart = today.startOfWeek()
     private val from = if (weekStart.isBefore(days.first())) weekStart else days.first()
 
+    /** Re-evaluates time-based outcomes (e.g. a missed wake-up deadline) while the screen is open. */
+    private val now = flow {
+        while (true) {
+            emit(LocalDateTime.now())
+            delay(60_000)
+        }
+    }
+
     val uiState: StateFlow<HabitsUiState> = combine(
         repository.observeActiveHabits(),
-        repository.observeEntries(from, today),
+        repository.observeAllEntries(),
         repository.observeLastEntryDates(),
-    ) { habits, entries, lastEntryDates ->
-        val doneDatesByHabit = entries.groupBy({ it.habitId }, { it.date })
-        val valueToday = entries.filter { it.date == today }.associate { it.habitId to it.value }
+        repository.observeAllSettings(),
+        now,
+    ) { habits, allEntries, lastEntryDates, settings, now ->
+        val weekEntries = allEntries.filter { !it.date.isBefore(from) && !it.date.isAfter(today) }
+        val doneDatesByHabit = weekEntries.groupBy({ it.habitId }, { it.date })
+        val valueToday = allEntries.filter { it.date == today }.associate { it.habitId to it.value }
+        val entriesByHabit = allEntries.groupBy { it.habitId }
 
-        val rows = habits.map { habit ->
+        val builtInRows = habits.mapNotNull { habit ->
+            if (BuiltInHabits.find(habit.kind) == null) return@mapNotNull null
+            val habitSettings = settings[habit.id].orEmpty()
+            val progress = habitProgress(habit, entriesByHabit[habit.id].orEmpty(), habitSettings, now)
+            BuiltInRowState(
+                habit = habit,
+                settings = habitSettings,
+                todayValue = valueToday[habit.id],
+                outcome = progress.todayOutcome ?: DayOutcome.PENDING,
+                minimumMinutes = progress.todayMinimumMinutes,
+            )
+        }
+        val builtInIds = builtInRows.mapTo(mutableSetOf()) { it.habit.id }
+
+        val rows = habits.filter { it.id !in builtInIds }.map { habit ->
             val doneDates = doneDatesByHabit[habit.id].orEmpty().toSet()
             HabitRowState(
                 habit = habit,
@@ -85,10 +127,11 @@ class HabitsViewModel(private val repository: HabitRepository) : ViewModel() {
         HabitsUiState(
             days = days,
             scheduled = scheduled,
+            builtIn = builtInRows,
             sporadic = sporadic,
             avoid = avoid,
-            doneToday = due.count { it.isDoneToday },
-            dueToday = due.size,
+            doneToday = due.count { it.isDoneToday } + builtInRows.count { it.outcome == DayOutcome.SUCCESS },
+            dueToday = due.size + builtInRows.size,
             slipsToday = avoid.count { it.isDoneToday },
             isLoading = false,
         )
@@ -96,6 +139,12 @@ class HabitsViewModel(private val repository: HabitRepository) : ViewModel() {
 
     fun toggle(habitId: Long, date: LocalDate) {
         viewModelScope.launch { repository.toggleEntry(habitId, date) }
+    }
+
+    fun setBuiltInValue(habitId: Long, value: Int?) {
+        viewModelScope.launch {
+            if (value == null) repository.removeEntry(habitId, today) else repository.saveEntry(habitId, today, value)
+        }
     }
 
     companion object {

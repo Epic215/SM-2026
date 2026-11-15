@@ -30,12 +30,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.habittracker.domain.isNegative
+import com.example.habittracker.ui.screens.builtin.wakeup.formatMinutes
 import com.example.habittracker.ui.screens.calendar.DayHabitItem
 
 @Composable
 fun DayHabitsList(
     items: List<DayHabitItem>,
     onToggle: (Long) -> Unit,
+    onEditBuiltIn: (DayHabitItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) {
@@ -50,13 +52,18 @@ fun DayHabitsList(
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items.forEach { item ->
-            DayHabitRow(item = item, onToggle = { onToggle(item.habit.id) })
+            DayHabitRow(
+                item = item,
+                onClick = {
+                    if (item.isBuiltIn) onEditBuiltIn(item) else onToggle(item.habit.id)
+                },
+            )
         }
     }
 }
 
 @Composable
-private fun DayHabitRow(item: DayHabitItem, onToggle: () -> Unit) {
+private fun DayHabitRow(item: DayHabitItem, onClick: () -> Unit) {
     val habitColor = Color(item.habit.color)
     val isNegative = item.habit.isNegative
     val colors = MaterialTheme.colorScheme
@@ -86,6 +93,11 @@ private fun DayHabitRow(item: DayHabitItem, onToggle: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 val subtitle = when {
+                    item.isBuiltIn && item.marked && item.value != null ->
+                        "Wstałeś o ${formatMinutes(item.value)}"
+                    item.isBuiltIn && item.value != null ->
+                        "Spóźnienie: ${formatMinutes(item.value)}"
+                    item.isBuiltIn -> "Brak wpisu"
                     isNegative && item.marked -> "Potknięcie"
                     isNegative -> "Do unikania"
                     !item.scheduled -> "Niezaplanowany"
@@ -95,25 +107,36 @@ private fun DayHabitRow(item: DayHabitItem, onToggle: () -> Unit) {
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isNegative && item.marked) colors.tertiary else colors.onSurfaceVariant,
+                        color = when {
+                            isNegative && item.marked -> colors.tertiary
+                            item.isBuiltIn && !item.marked -> colors.tertiary
+                            else -> colors.onSurfaceVariant
+                        },
                     )
                 }
             }
-            val markColor = if (isNegative) colors.tertiary else habitColor
+            val markColor = when {
+                isNegative -> colors.tertiary
+                item.isBuiltIn && !item.marked && item.value != null -> colors.tertiary
+                else -> habitColor
+            }
             Box(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
                     .then(
-                        if (item.marked) Modifier.background(markColor)
-                        else Modifier.border(2.dp, habitColor.copy(alpha = 0.35f), CircleShape)
+                        if (item.marked || (item.isBuiltIn && item.value != null)) {
+                            Modifier.background(if (item.marked) markColor else colors.tertiary)
+                        } else {
+                            Modifier.border(2.dp, habitColor.copy(alpha = 0.35f), CircleShape)
+                        }
                     )
-                    .clickable(onClick = onToggle),
+                    .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center,
             ) {
-                if (item.marked) {
+                if (item.marked || (item.isBuiltIn && item.value != null)) {
                     Icon(
-                        if (isNegative) Icons.Rounded.Close else Icons.Rounded.Check,
+                        if (isNegative || (item.isBuiltIn && !item.marked)) Icons.Rounded.Close else Icons.Rounded.Check,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(18.dp),

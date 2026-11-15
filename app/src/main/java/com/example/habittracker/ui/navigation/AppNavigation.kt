@@ -22,6 +22,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.habittracker.data.model.HabitKind
+import com.example.habittracker.domain.builtin.BuiltInHabits
+import com.example.habittracker.ui.screens.builtin.BuiltInCatalogScreen
+import com.example.habittracker.ui.screens.builtin.BuiltInSetupScreen
+import com.example.habittracker.ui.screens.builtin.wakeup.WakeUpSetupViewModel
 import com.example.habittracker.ui.screens.calendar.CalendarScreen
 import com.example.habittracker.ui.screens.details.HabitDetailsScreen
 import com.example.habittracker.ui.screens.details.HabitDetailsViewModel
@@ -47,6 +52,10 @@ private const val HABIT_EDIT_ROUTE_PATTERN =
 private const val HABIT_DETAILS_ROUTE = "habit/details"
 private const val HABIT_DETAILS_ROUTE_PATTERN =
     "$HABIT_DETAILS_ROUTE/{${HabitDetailsViewModel.HABIT_ID_ARG}}"
+private const val BUILTIN_CATALOG_ROUTE = "builtin/catalog"
+private const val BUILTIN_SETUP_ROUTE = "builtin/setup"
+private const val BUILTIN_SETUP_ROUTE_PATTERN =
+    "$BUILTIN_SETUP_ROUTE/{kind}?${WakeUpSetupViewModel.HABIT_ID_ARG}={${WakeUpSetupViewModel.HABIT_ID_ARG}}"
 
 @Composable
 fun AppNavigation() {
@@ -92,6 +101,7 @@ fun AppNavigation() {
                     onAddSporadic = {
                         navController.navigate("$HABIT_EDIT_ROUTE?${HabitEditViewModel.SPORADIC_ARG}=true")
                     },
+                    onAddBuiltIn = { navController.navigate(BUILTIN_CATALOG_ROUTE) },
                     onOpenHabit = { id -> navController.navigate("$HABIT_DETAILS_ROUTE/$id") },
                 )
             }
@@ -122,10 +132,42 @@ fun AppNavigation() {
             ) {
                 HabitDetailsScreen(
                     onBack = { navController.popBackStack() },
-                    onEdit = { id ->
-                        navController.navigate("$HABIT_EDIT_ROUTE?${HabitEditViewModel.HABIT_ID_ARG}=$id")
+                    onEdit = { habit ->
+                        if (BuiltInHabits.find(habit.kind) != null) {
+                            navController.navigate(
+                                "$BUILTIN_SETUP_ROUTE/${habit.kind.name}" +
+                                    "?${WakeUpSetupViewModel.HABIT_ID_ARG}=${habit.id}"
+                            )
+                        } else {
+                            navController.navigate(
+                                "$HABIT_EDIT_ROUTE?${HabitEditViewModel.HABIT_ID_ARG}=${habit.id}"
+                            )
+                        }
                     },
                 )
+            }
+            composable(BUILTIN_CATALOG_ROUTE) {
+                BuiltInCatalogScreen(
+                    onBack = { navController.popBackStack() },
+                    onSelect = { kind ->
+                        navController.navigate("$BUILTIN_SETUP_ROUTE/${kind.name}") {
+                            popUpTo(BUILTIN_CATALOG_ROUTE) { inclusive = true }
+                        }
+                    },
+                )
+            }
+            composable(
+                route = BUILTIN_SETUP_ROUTE_PATTERN,
+                arguments = listOf(
+                    navArgument("kind") { type = NavType.StringType },
+                    navArgument(WakeUpSetupViewModel.HABIT_ID_ARG) {
+                        type = NavType.LongType
+                        defaultValue = -1L
+                    },
+                ),
+            ) { entry ->
+                val kind = HabitKind.valueOf(entry.arguments?.getString("kind")!!)
+                BuiltInSetupScreen(kind = kind, onDone = { navController.popBackStack() })
             }
         }
     }

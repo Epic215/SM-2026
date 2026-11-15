@@ -37,11 +37,13 @@ fun StatsPeriod.rangeContaining(date: LocalDate): DateRange = when (this) {
     StatsPeriod.MONTH -> date.withDayOfMonth(1).let { DateRange(it, it.plusMonths(1).minusDays(1)) }
 }
 
+/** [isTodayDecided]: whether today is already judged; by default only once it is marked. */
 fun calculateStats(
     habit: Habit,
     doneDates: Set<LocalDate>,
     period: StatsPeriod,
     today: LocalDate,
+    isTodayDecided: Boolean = today in doneDates,
 ): HabitStats {
     val range = period.rangeContaining(today)
     val periodCompletions = doneDates.count { it in range }
@@ -68,7 +70,7 @@ fun calculateStats(
     val periodFilter: DateRange
     when (streakUnit) {
         StreakUnit.DAYS -> {
-            outcomes = dailyOutcomes(effectiveHabit, doneDates, today)
+            outcomes = dailyOutcomes(effectiveHabit, doneDates, today, isTodayDecided)
             periodFilter = range
         }
         StreakUnit.WEEKS -> {
@@ -93,13 +95,18 @@ fun calculateStats(
 
 private data class Outcome(val date: LocalDate, val success: Boolean)
 
-/** Today is only judged once marked, so an unfinished day never affects a streak. */
-private fun dailyOutcomes(habit: Habit, doneDates: Set<LocalDate>, today: LocalDate): List<Outcome> =
+/** An undecided today is skipped, so an unfinished day never affects a streak. */
+private fun dailyOutcomes(
+    habit: Habit,
+    doneDates: Set<LocalDate>,
+    today: LocalDate,
+    isTodayDecided: Boolean,
+): List<Outcome> =
     generateSequence(habit.startDate) { it.plusDays(1) }
         .takeWhile { !it.isAfter(today) }
         .filter { habit.isActiveOn(it) }
         .map { Outcome(it, success = (it in doneDates) != habit.isNegative) }
-        .filter { it.date != today || it.date in doneDates }
+        .filter { it.date != today || isTodayDecided }
         .toList()
 
 /** The current week is only judged once its outcome can no longer change. */

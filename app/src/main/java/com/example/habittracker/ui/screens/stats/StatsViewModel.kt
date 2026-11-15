@@ -7,6 +7,7 @@ import com.example.habittracker.domain.OverviewStats
 import com.example.habittracker.domain.StatsPeriod
 import com.example.habittracker.domain.calculateOverview
 import com.example.habittracker.domain.dayCompletion
+import com.example.habittracker.domain.progressByHabit
 import com.example.habittracker.domain.startOfWeek
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 data class StatsUiState(
     val period: StatsPeriod = StatsPeriod.WEEK,
@@ -31,9 +33,12 @@ class StatsViewModel(repository: HabitRepository) : ViewModel() {
     val uiState: StateFlow<StatsUiState> = combine(
         repository.observeActiveHabits(),
         repository.observeAllEntries(),
+        repository.observeAllSettings(),
         period,
-    ) { habits, entries, period ->
-        val doneByHabit = entries.groupBy({ it.habitId }, { it.date }).mapValues { it.value.toSet() }
+    ) { habits, entries, settings, period ->
+        val progress = progressByHabit(habits, entries, settings, LocalDateTime.now())
+        val doneByHabit = progress.mapValues { it.value.doneDates }
+        val todayDecided = progress.mapValues { it.value.isTodayDecided }
         val heatmap = generateSequence(heatmapStart) { it.plusDays(1) }
             .takeWhile { !it.isAfter(today) }
             .mapNotNull { date -> dayCompletion(habits, doneByHabit, date)?.let { date to it } }
@@ -41,7 +46,7 @@ class StatsViewModel(repository: HabitRepository) : ViewModel() {
 
         StatsUiState(
             period = period,
-            overview = calculateOverview(habits, doneByHabit, period, today),
+            overview = calculateOverview(habits, doneByHabit, period, today, todayDecided),
             heatmap = heatmap,
             isLoading = false,
         )

@@ -3,6 +3,7 @@ package com.example.habittracker.data
 import com.example.habittracker.data.local.HabitDao
 import com.example.habittracker.data.model.Habit
 import com.example.habittracker.data.model.HabitEntry
+import com.example.habittracker.data.model.HabitSetting
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -34,6 +35,30 @@ class HabitRepository(private val dao: HabitDao) {
 
     fun observeLastEntryDates(): Flow<Map<Long, LocalDate>> =
         dao.observeLastEntryDates().map { list -> list.associate { it.habitId to it.date } }
+
+    fun observeSettings(habitId: Long): Flow<Map<String, String>> =
+        dao.observeSettings(habitId).map { list -> list.associate { it.key to it.value } }
+
+    fun observeAllSettings(): Flow<Map<Long, Map<String, String>>> =
+        dao.observeAllSettings().map { list ->
+            list.groupBy { it.habitId }.mapValues { (_, settings) -> settings.associate { it.key to it.value } }
+        }
+
+    suspend fun saveBuiltInHabit(habit: Habit, settings: Map<String, String>): Long {
+        val id = if (habit.id == 0L) {
+            dao.insertHabit(habit)
+        } else {
+            dao.updateHabit(habit)
+            habit.id
+        }
+        dao.upsertSettings(settings.map { (key, value) -> HabitSetting(id, key, value) })
+        return id
+    }
+
+    suspend fun saveEntry(habitId: Long, date: LocalDate, value: Int) =
+        dao.upsertEntry(HabitEntry(habitId, date, value))
+
+    suspend fun removeEntry(habitId: Long, date: LocalDate) = dao.deleteEntry(habitId, date)
 
     suspend fun toggleEntry(habitId: Long, date: LocalDate) {
         if (dao.getEntry(habitId, date) != null) {

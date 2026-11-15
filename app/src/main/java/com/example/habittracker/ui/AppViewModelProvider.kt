@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.habittracker.HabitTrackerApp
+import com.example.habittracker.ui.screens.builtin.wakeup.WakeUpSetupViewModel
 import com.example.habittracker.ui.screens.calendar.CalendarViewModel
 import com.example.habittracker.ui.screens.details.HabitDetailsViewModel
 import com.example.habittracker.ui.screens.edit.HabitEditViewModel
@@ -19,6 +20,7 @@ object AppViewModelProvider {
         initializer { HabitDetailsViewModel(createSavedStateHandle(), habitTrackerApp().repository) }
         initializer { CalendarViewModel(habitTrackerApp().repository) }
         initializer { StatsViewModel(habitTrackerApp().repository) }
+        initializer { WakeUpSetupViewModel(createSavedStateHandle(), habitTrackerApp().repository) }
     }
 }
 

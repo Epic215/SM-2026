@@ -1,5 +1,5 @@
 # SM-2026
-## Aplikacja do śledzenia nawyków
+## Aplikacja do śledzenia nawyków (HabitTracker)
 Aplikacja ma za zadanie pomagać użytkownikowi w budowaniu pozytywnych nawyków i ograniczaniu tych negatywnych. Ma umożliwiać codzienne zaznaczanie wykonanych nawyków, a następnie analizować ich liczbę oraz prezentować podsumowanie dnia i statystyki w dłuższym okresie.
 Dodatkowo użytkownik będzie mógł wybrać bardziej wyspecjalizowane, wbudowane nawyki, np. związane ze stopniową poprawą godziny wstawania albo z ograniczaniem zbyt długiego korzystania z wybranych stron i aplikacji.
 
@@ -44,5 +44,5 @@ Dodatkowo użytkownik będzie mógł wybrać bardziej wyspecjalizowane, wbudowan
 - **01.11.2026**: dodawanie, edycja i usuwanie nawyków, lista z odhaczaniem ostatnich dni, nawyki sporadyczne, podsumowanie dnia
 - **06.11.2026**: statystyki (wykonania, skuteczność, aktualna i najdłuższa seria) z testami jednostkowymi, ekran szczegółów nawyku z kalendarzem historii
 - **08.11.2026**: nawyki negatywne (potknięcia, dni bez potknięcia), kalendarz wszystkich nawyków, ekran statystyk z heatmapą i rankingiem
-- **14.11.2026**: wbudowany nawyk „wcześniejsze wstawanie”: katalog wbudowanych, ustawienia (cel, krok, tolerancja, czas na zaznaczenie), wpisywanie godziny, automatyczna porażka po deadline
-- **15.11.2026**: wbudowany nawyk „limit czasu w aplikacjach”: wybór appek, dzienny limit, odczyt UsageStatsManager, uprawnienie dostępu do danych o użyciu
+- **14.11.2026**: wbudowany nawyk „wcześniejsze wstawanie”: katalog wbudowanych, ustawienia (cel, krok, tolerancja, czas na zaznaczenie), wpisywanie godziny, porażka po nieodznaczeniu w czasie
+- **15.11.2026**: wbudowany nawyk „limit czasu w aplikacjach”: wybór aplikacji, dzienny limit, odczyt UsageStatsManager, uprawnienie dostępu do danych o użyciu

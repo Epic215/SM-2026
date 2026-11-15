@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.habittracker.data.model.HabitKind
 import com.example.habittracker.domain.isNegative
 import com.example.habittracker.ui.screens.builtin.wakeup.formatMinutes
 import com.example.habittracker.ui.screens.calendar.DayHabitItem
@@ -93,10 +94,12 @@ private fun DayHabitRow(item: DayHabitItem, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 val subtitle = when {
-                    item.isBuiltIn && item.marked && item.value != null ->
+                    item.habit.kind == HabitKind.WAKE_UP && item.marked && item.value != null ->
                         "Wstałeś o ${formatMinutes(item.value)}"
-                    item.isBuiltIn && item.value != null ->
+                    item.habit.kind == HabitKind.WAKE_UP && item.value != null ->
                         "Spóźnienie: ${formatMinutes(item.value)}"
+                    item.habit.kind == HabitKind.SCREEN_TIME && item.value != null ->
+                        "Dziś: ${item.value} min"
                     item.isBuiltIn -> "Brak wpisu"
                     isNegative && item.marked -> "Potknięcie"
                     isNegative -> "Do unikania"

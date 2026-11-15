@@ -65,6 +65,7 @@ fun HabitsScreen(
                 uiState = uiState,
                 onToggle = viewModel::toggle,
                 onSetBuiltInValue = viewModel::setBuiltInValue,
+                onOpenUsageAccess = viewModel::openUsageAccessSettings,
                 onAddSporadic = onAddSporadic,
                 onAddBuiltIn = onAddBuiltIn,
                 onOpenHabit = onOpenHabit,
@@ -89,6 +90,7 @@ private fun HabitsList(
     uiState: HabitsUiState,
     onToggle: (Long, LocalDate) -> Unit,
     onSetBuiltInValue: (Long, Int?) -> Unit,
+    onOpenUsageAccess: () -> Unit,
     onAddSporadic: () -> Unit,
     onAddBuiltIn: () -> Unit,
     onOpenHabit: (Long) -> Unit,
@@ -136,6 +138,8 @@ private fun HabitsList(
                 BuiltInHabitRow(
                     row = row,
                     today = uiState.days.last(),
+                    hasUsageAccess = uiState.hasUsageAccess,
+                    onOpenUsageAccess = onOpenUsageAccess,
                     onSetValue = { value -> onSetBuiltInValue(row.habit.id, value) },
                     onClick = { onOpenHabit(row.habit.id) },
                 )

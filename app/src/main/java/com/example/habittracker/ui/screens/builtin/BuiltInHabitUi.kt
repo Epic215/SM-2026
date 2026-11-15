@@ -3,6 +3,9 @@ package com.example.habittracker.ui.screens.builtin
 import androidx.compose.runtime.Composable
 import com.example.habittracker.data.model.Habit
 import com.example.habittracker.data.model.HabitKind
+import com.example.habittracker.ui.screens.builtin.screentime.ScreenTimeDetailsInfo
+import com.example.habittracker.ui.screens.builtin.screentime.ScreenTimeRow
+import com.example.habittracker.ui.screens.builtin.screentime.ScreenTimeSetupScreen
 import com.example.habittracker.ui.screens.builtin.wakeup.WakeUpDayDialog
 import com.example.habittracker.ui.screens.builtin.wakeup.WakeUpDetailsInfo
 import com.example.habittracker.ui.screens.builtin.wakeup.WakeUpRow
@@ -16,12 +19,20 @@ import java.time.LocalDate
 fun BuiltInHabitRow(
     row: BuiltInRowState,
     today: LocalDate,
+    hasUsageAccess: Boolean,
+    onOpenUsageAccess: () -> Unit,
     onSetValue: (Int?) -> Unit,
     onClick: () -> Unit,
 ) {
     when (row.habit.kind) {
         HabitKind.WAKE_UP -> WakeUpRow(row = row, today = today, onSetValue = onSetValue, onClick = onClick)
-        HabitKind.REGULAR, HabitKind.SCREEN_TIME -> Unit
+        HabitKind.SCREEN_TIME -> ScreenTimeRow(
+            row = row,
+            hasUsageAccess = hasUsageAccess,
+            onOpenUsageAccess = onOpenUsageAccess,
+            onClick = onClick,
+        )
+        HabitKind.REGULAR -> Unit
     }
 }
 
@@ -29,7 +40,8 @@ fun BuiltInHabitRow(
 fun BuiltInSetupScreen(kind: HabitKind, onDone: () -> Unit) {
     when (kind) {
         HabitKind.WAKE_UP -> WakeUpSetupScreen(onDone = onDone)
-        HabitKind.REGULAR, HabitKind.SCREEN_TIME -> Unit
+        HabitKind.SCREEN_TIME -> ScreenTimeSetupScreen(onDone = onDone)
+        HabitKind.REGULAR -> Unit
     }
 }
 
@@ -38,6 +50,7 @@ fun BuiltInDetailsInfo(
     habit: Habit,
     settings: Map<String, String>,
     todayMinimumMinutes: Int?,
+    todayMinutes: Int? = null,
 ) {
     when (habit.kind) {
         HabitKind.WAKE_UP -> WakeUpDetailsInfo(
@@ -45,7 +58,12 @@ fun BuiltInDetailsInfo(
             settings = settings,
             todayMinimumMinutes = todayMinimumMinutes,
         )
-        HabitKind.REGULAR, HabitKind.SCREEN_TIME -> Unit
+        HabitKind.SCREEN_TIME -> ScreenTimeDetailsInfo(
+            habit = habit,
+            settings = settings,
+            todayMinutes = todayMinutes,
+        )
+        HabitKind.REGULAR -> Unit
     }
 }
 
@@ -71,6 +89,6 @@ fun BuiltInDayDialog(
             onRemove = onRemove,
             onDismiss = onDismiss,
         )
-        HabitKind.REGULAR, HabitKind.SCREEN_TIME -> Unit
+        HabitKind.SCREEN_TIME, HabitKind.REGULAR -> Unit
     }
 }

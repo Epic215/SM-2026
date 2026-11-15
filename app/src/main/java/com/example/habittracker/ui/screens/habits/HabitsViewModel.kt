@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.HabitRepository
 import com.example.habittracker.data.model.FrequencyType
 import com.example.habittracker.data.model.Habit
+import com.example.habittracker.data.model.HabitKind
+import com.example.habittracker.data.usage.UsageStatsReader
 import com.example.habittracker.domain.builtin.BuiltInHabits
 import com.example.habittracker.domain.builtin.DayOutcome
+import com.example.habittracker.domain.builtin.ScreenTimeSettings
 import com.example.habittracker.domain.habitProgress
 import com.example.habittracker.domain.isActiveOn
 import com.example.habittracker.domain.isDueOn
@@ -58,24 +61,43 @@ data class HabitsUiState(
     val doneToday: Int = 0,
     val dueToday: Int = 0,
     val slipsToday: Int = 0,
+    val hasUsageAccess: Boolean = false,
     val isLoading: Boolean = true,
 ) {
     val isEmpty: Boolean
         get() = scheduled.isEmpty() && builtIn.isEmpty() && sporadic.isEmpty() && avoid.isEmpty()
 }
 
-class HabitsViewModel(private val repository: HabitRepository) : ViewModel() {
+class HabitsViewModel(
+    private val repository: HabitRepository,
+    private val usageStatsReader: UsageStatsReader,
+) : ViewModel() {
 
     private val today = LocalDate.now()
     private val days = (VISIBLE_DAYS - 1 downTo 0).map { today.minusDays(it.toLong()) }
     private val weekStart = today.startOfWeek()
     private val from = if (weekStart.isBefore(days.first())) weekStart else days.first()
 
-    /** Re-evaluates time-based outcomes (e.g. a missed wake-up deadline) while the screen is open. */
+    /** Re-evaluates time-based outcomes while the screen is open. */
     private val now = flow {
         while (true) {
             emit(LocalDateTime.now())
             delay(60_000)
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            combine(
+                repository.observeActiveHabits(),
+                repository.observeAllSettings(),
+                repository.observeAllEntries(),
+                now,
+            ) { habits, settings, entries, _ ->
+                Triple(habits, settings, entries)
+            }.collect { (habits, settings, entries) ->
+                syncScreenTime(habits, settings, entries)
+            }
         }
     }
 
@@ -133,6 +155,7 @@ class HabitsViewModel(private val repository: HabitRepository) : ViewModel() {
             doneToday = due.count { it.isDoneToday } + builtInRows.count { it.outcome == DayOutcome.SUCCESS },
             dueToday = due.size + builtInRows.size,
             slipsToday = avoid.count { it.isDoneToday },
+            hasUsageAccess = usageStatsReader.hasUsageAccess(),
             isLoading = false,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HabitsUiState())
@@ -144,6 +167,26 @@ class HabitsViewModel(private val repository: HabitRepository) : ViewModel() {
     fun setBuiltInValue(habitId: Long, value: Int?) {
         viewModelScope.launch {
             if (value == null) repository.removeEntry(habitId, today) else repository.saveEntry(habitId, today, value)
+        }
+    }
+
+    fun openUsageAccessSettings() = usageStatsReader.openUsageAccessSettings()
+
+    private suspend fun syncScreenTime(
+        habits: List<Habit>,
+        settings: Map<Long, Map<String, String>>,
+        entries: List<com.example.habittracker.data.model.HabitEntry>,
+    ) {
+        if (!usageStatsReader.hasUsageAccess()) return
+        val valueToday = entries.filter { it.date == today }.associate { it.habitId to it.value }
+        for (habit in habits) {
+            if (habit.kind != HabitKind.SCREEN_TIME) continue
+            val screenSettings = ScreenTimeSettings.from(settings[habit.id].orEmpty())
+            if (screenSettings.packages.isEmpty()) continue
+            val minutes = usageStatsReader.foregroundMinutesToday(screenSettings.packages)
+            if (valueToday[habit.id] != minutes) {
+                repository.saveEntry(habit.id, today, minutes)
+            }
         }
     }
 

@@ -5,11 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.habittracker.data.HabitRepository
 import com.example.habittracker.data.model.Habit
+import com.example.habittracker.data.model.HabitKind
+import com.example.habittracker.data.usage.UsageStatsReader
 import com.example.habittracker.domain.HabitStats
 import com.example.habittracker.domain.StatsPeriod
+import com.example.habittracker.domain.builtin.BuiltInHabits
+import com.example.habittracker.domain.builtin.ScreenTimeSettings
 import com.example.habittracker.domain.calculateStats
 import com.example.habittracker.domain.habitProgress
-import com.example.habittracker.domain.builtin.BuiltInHabits
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,6 +40,7 @@ data class HabitDetailsUiState(
 class HabitDetailsViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: HabitRepository,
+    private val usageStatsReader: UsageStatsReader,
 ) : ViewModel() {
 
     private val habitId: Long = checkNotNull(savedStateHandle[HABIT_ID_ARG])
@@ -48,6 +52,26 @@ class HabitDetailsViewModel(
         while (true) {
             emit(LocalDateTime.now())
             delay(60_000)
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            combine(
+                repository.observeHabit(habitId),
+                repository.observeSettings(habitId),
+                repository.observeEntriesForHabit(habitId),
+                now,
+            ) { habit, settings, entries, _ ->
+                Triple(habit, settings, entries)
+            }.collect { (habit, settings, entries) ->
+                if (habit?.kind != HabitKind.SCREEN_TIME || !usageStatsReader.hasUsageAccess()) return@collect
+                val screenSettings = ScreenTimeSettings.from(settings)
+                if (screenSettings.packages.isEmpty()) return@collect
+                val minutes = usageStatsReader.foregroundMinutesToday(screenSettings.packages)
+                val current = entries.firstOrNull { it.date == today }?.value
+                if (current != minutes) repository.saveEntry(habitId, today, minutes)
+            }
         }
     }
 

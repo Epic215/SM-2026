@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.habittracker.data.model.FrequencyType
 import com.example.habittracker.data.model.Habit
+import com.example.habittracker.data.model.HabitKind
 import com.example.habittracker.domain.HabitStats
 import com.example.habittracker.domain.StatsPeriod
 import com.example.habittracker.domain.StreakUnit
@@ -120,6 +121,7 @@ fun HabitDetailsScreen(
                     habit = habit,
                     settings = uiState.settings,
                     todayMinimumMinutes = uiState.todayMinimumMinutes,
+                    todayMinutes = uiState.entriesByDate[viewModel.today],
                 )
             } else if (habit.description.isNotBlank()) {
                 Text(
@@ -147,7 +149,12 @@ fun HabitDetailsScreen(
                 isNegative = habit.isNegative,
                 today = viewModel.today,
                 onDayClick = { date ->
-                    if (uiState.isBuiltIn) editingDate = date else viewModel.toggleDay(date)
+                    when {
+                        habit.kind == HabitKind.WAKE_UP -> editingDate = date
+                        habit.kind == HabitKind.SCREEN_TIME -> Unit
+                        uiState.isBuiltIn -> Unit
+                        else -> viewModel.toggleDay(date)
+                    }
                 },
             )
             Spacer(Modifier.height(16.dp))

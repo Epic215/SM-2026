@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.habittracker.data.model.HabitKind
 import com.example.habittracker.ui.AppViewModelProvider
 import com.example.habittracker.ui.screens.builtin.BuiltInDayDialog
 import com.example.habittracker.ui.screens.calendar.components.DayHabitsList
@@ -81,7 +82,9 @@ fun CalendarScreen(
         DayHabitsList(
             items = uiState.dayItems,
             onToggle = { habitId -> viewModel.toggle(habitId, uiState.selectedDate) },
-            onEditBuiltIn = { editingHabitId = it.habit.id },
+            onEditBuiltIn = { item ->
+                if (item.habit.kind == HabitKind.WAKE_UP) editingHabitId = item.habit.id
+            },
         )
     }
 

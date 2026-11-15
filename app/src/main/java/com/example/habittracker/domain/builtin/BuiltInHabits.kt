@@ -6,6 +6,7 @@ object BuiltInHabits {
 
     val all: List<BuiltInHabit> = listOf(
         WakeUpHabit,
+        ScreenTimeHabit,
     )
 
     fun find(kind: HabitKind): BuiltInHabit? = all.firstOrNull { it.kind == kind }
